@@ -142,12 +142,6 @@ function AdminPage() {
       let imported = 0;
 
 
-      const sectionCache = new Map<string, string>();
-      const headerCache = new Map<string, string>();
-      let sectionOrder = 0;
-      let headerOrder = 0;
-      let itemOrder = 0;
-      let imported = 0;
 
       for (const row of rows) {
         const sectionName = pick(row, ["section", "القسم"]);
