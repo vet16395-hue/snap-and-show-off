@@ -85,13 +85,13 @@ function AuditsList() {
         {audits?.map((audit) => {
           const branch = (audit.branches as { name_ar: string } | null)?.name_ar ?? "—";
           const type = (audit.audit_types as { name_ar: string } | null)?.name_ar ?? "—";
-          const auditor = (audit.profiles as { full_name: string; email: string } | null);
           return (
             <div key={audit.id} className="surface-card flex flex-wrap items-center gap-3 p-4">
               <div className="min-w-40">
                 <div className="text-base font-bold">{branch}</div>
                 <div className="text-xs text-muted-foreground">
-                  {type} · {audit.audit_date} · {auditor?.full_name || auditor?.email || ""}
+                  {type} · {audit.audit_date}
+
                 </div>
               </div>
               <Badge variant={audit.status === "draft" ? "outline" : "default"} className="ms-2">
