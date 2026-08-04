@@ -298,10 +298,11 @@ function AuditRunner() {
             return (
               <div key={question.id} className="surface-card p-4">
                 {header && <div className="text-xs font-semibold text-primary">{header.label_ar}</div>}
-                <div className="mt-1 flex gap-2 text-sm font-medium">
-                  <span className="text-muted-foreground">{question.item_id}</span>
-                  <span>{question.text_ar}</span>
+                <div className="mt-1 space-y-1">
+                  <div className="text-[11px] text-muted-foreground" dir="ltr">{question.item_id}</div>
+                  <p className="text-sm font-semibold leading-relaxed">{question.text_ar}</p>
                 </div>
+
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   {SCORE_OPTIONS.filter((option) => option.value <= question.max_score).map((option) => (
