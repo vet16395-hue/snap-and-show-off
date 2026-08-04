@@ -2,23 +2,22 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
-import { Trash2, Upload } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { ChecklistManager } from "@/components/admin/ChecklistManager";
 import { useSession } from "@/hooks/useSession";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [
       { title: "الإدارة — SBAS" },
-      { name: "description", content: "إدارة الفروع، المدققين، واستيراد قوائم الفحص من ملفات Excel." },
+      { name: "description", content: "إدارة الفروع، المدققين، وقوائم الفحص وأنواع التدقيق." },
       { property: "og:title", content: "الإدارة — SBAS" },
       { property: "og:description", content: "لوحة إدارة نظام تدقيق فروع سعودي." },
       { name: "robots", content: "noindex" },
@@ -27,38 +26,20 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-const pick = (row: Record<string, unknown>, keys: string[]) => {
-  for (const key of Object.keys(row)) {
-    const normalized = key.trim().toLowerCase();
-    if (keys.some((candidate) => normalized === candidate || normalized.includes(candidate))) {
-      const value = row[key];
-      if (value !== undefined && value !== null && String(value).trim() !== "") return String(value).trim();
-    }
-  }
-  return "";
-};
-
 function AdminPage() {
   const { isAdmin } = useSession();
   const queryClient = useQueryClient();
-  const [importing, setImporting] = useState(false);
-  const [typeId, setTypeId] = useState("");
-  const [replaceExisting, setReplaceExisting] = useState(true);
-  const [newTypeName, setNewTypeName] = useState("");
-  const [newTypeCode, setNewTypeCode] = useState("");
   const [branchName, setBranchName] = useState("");
   const [branchCode, setBranchCode] = useState("");
-
 
   const { data } = useQuery({
     queryKey: ["admin-data"],
     queryFn: async () => {
-      const [branches, types, profiles] = await Promise.all([
+      const [branches, profiles] = await Promise.all([
         supabase.from("branches").select("*").order("name_ar"),
-        supabase.from("audit_types").select("*").order("name_ar"),
         supabase.from("profiles").select("*").order("full_name"),
       ]);
-      return { branches: branches.data ?? [], types: types.data ?? [], profiles: profiles.data ?? [] };
+      return { branches: branches.data ?? [], profiles: profiles.data ?? [] };
     },
   });
 
@@ -71,144 +52,6 @@ function AdminPage() {
       </AppShell>
     );
   }
-
-  const purgeChecklist = async () => {
-    const { data: oldQuestions } = await supabase.from("questions").select("id").eq("audit_type_id", typeId);
-    const ids = (oldQuestions ?? []).map((q) => q.id);
-    if (ids.length) {
-      const { count } = await supabase
-        .from("audit_answers")
-        .select("id", { count: "exact", head: true })
-        .in("question_id", ids);
-      if (count && count > 0) {
-        // الأسئلة مستخدمة في تدقيقات سابقة: نعطلها بدل حذفها للحفاظ على التقارير
-        await supabase.from("questions").update({ active: false }).eq("audit_type_id", typeId);
-        await supabase.from("sections").update({ active: false }).eq("audit_type_id", typeId);
-        return "archived";
-      }
-      await supabase.from("questions").delete().eq("audit_type_id", typeId);
-    }
-    const { data: oldSections } = await supabase.from("sections").select("id").eq("audit_type_id", typeId);
-    const sectionIds = (oldSections ?? []).map((s) => s.id);
-    if (sectionIds.length) await supabase.from("headers").delete().in("section_id", sectionIds);
-    await supabase.from("sections").delete().eq("audit_type_id", typeId);
-    return "deleted";
-  };
-
-  const addAuditType = async () => {
-    if (!newTypeName.trim() || !newTypeCode.trim()) {
-      toast.error("أدخل اسم النوع والكود");
-      return;
-    }
-    const { data: created, error } = await supabase
-      .from("audit_types")
-      .insert({
-        name_ar: newTypeName.trim().slice(0, 120),
-        name_en: newTypeName.trim().slice(0, 120),
-        code: newTypeCode.trim().slice(0, 40),
-      })
-      .select("id")
-      .single();
-    if (error || !created) {
-      toast.error("تعذر إضافة نوع التدقيق");
-      return;
-    }
-    setNewTypeName("");
-    setNewTypeCode("");
-    setTypeId(created.id);
-    toast.success("تمت إضافة نوع التدقيق");
-    queryClient.invalidateQueries({ queryKey: ["admin-data"] });
-  };
-
-  const importChecklist = async (file: File) => {
-    if (!typeId) {
-      toast.error("اختر نوع التدقيق أولاً");
-      return;
-    }
-    setImporting(true);
-    try {
-      let purgeResult: string | null = null;
-      if (replaceExisting) purgeResult = await purgeChecklist();
-
-      const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]!]!;
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-
-      const sectionCache = new Map<string, string>();
-      const headerCache = new Map<string, string>();
-      let sectionOrder = 0;
-      let headerOrder = 0;
-      let itemOrder = 0;
-      let imported = 0;
-
-
-
-      for (const row of rows) {
-        const sectionName = pick(row, ["section", "القسم"]);
-        const questionText = pick(row, ["question", "السؤال", "البند", "item text"]);
-        if (!sectionName || !questionText) continue;
-
-        let sectionId = sectionCache.get(sectionName);
-        if (!sectionId) {
-          const isDelivery = /delivery|توصيل/i.test(sectionName);
-          const { data: created, error } = await supabase
-            .from("sections")
-            .insert({
-              audit_type_id: typeId,
-              name_ar: sectionName,
-              order_index: sectionOrder++,
-              is_delivery: isDelivery,
-            })
-            .select("id")
-            .single();
-          if (error || !created) throw error ?? new Error("section");
-          sectionId = created.id;
-          sectionCache.set(sectionName, sectionId);
-        }
-
-        const headerName = pick(row, ["header", "العنوان", "المجموعة"]);
-        let headerId: string | null = null;
-        if (headerName) {
-          const key = `${sectionId}|${headerName}`;
-          headerId = headerCache.get(key) ?? null;
-          if (!headerId) {
-            const { data: created } = await supabase
-              .from("headers")
-              .insert({ section_id: sectionId, label_ar: headerName, order_index: headerOrder++ })
-              .select("id")
-              .single();
-            headerId = created?.id ?? null;
-            if (headerId) headerCache.set(key, headerId);
-          }
-        }
-
-        const maxScoreRaw = Number(pick(row, ["max", "الدرجة", "score"]));
-        const { error: questionError } = await supabase.from("questions").insert({
-          audit_type_id: typeId,
-          section_id: sectionId,
-          header_id: headerId,
-          item_id: pick(row, ["item id", "id", "الرقم", "كود"]) || String(itemOrder + 1),
-          text_ar: questionText,
-          max_score: Number.isFinite(maxScoreRaw) && maxScoreRaw > 0 ? maxScoreRaw : 4,
-          item_order: itemOrder++,
-        });
-        if (questionError) throw questionError;
-        imported += 1;
-      }
-
-      toast.success(
-        purgeResult === "archived"
-          ? `تم أرشفة الأسئلة القديمة (مستخدمة في تدقيقات سابقة) واستيراد ${imported} سؤالاً`
-          : `تم استيراد ${imported} سؤالاً`,
-      );
-
-      queryClient.invalidateQueries();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "تعذر استيراد الملف");
-    } finally {
-      setImporting(false);
-    }
-  };
 
   const addBranch = async () => {
     if (!branchName.trim() || !branchCode.trim()) {
@@ -237,36 +80,7 @@ function AdminPage() {
         </TabsList>
 
         <TabsContent value="checklist" className="pt-4">
-          <div className="surface-card space-y-4 p-5">
-            <div className="space-y-1.5">
-              <Label>نوع التدقيق</Label>
-              <Select value={typeId} onValueChange={setTypeId}>
-                <SelectTrigger><SelectValue placeholder="اختر النوع" /></SelectTrigger>
-                <SelectContent>
-                  {data?.types.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>{type.name_ar}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-              <Upload className="size-4" /> {importing ? "جارٍ الاستيراد…" : "استيراد ملف Excel"}
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                className="hidden"
-                disabled={importing}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) importChecklist(file);
-                  event.target.value = "";
-                }}
-              />
-            </label>
-            <p className="text-xs text-muted-foreground">
-              يتوقع الملف أعمدة: القسم (Section)، العنوان (Header)، رقم البند (Item ID)، السؤال (Question)، الدرجة القصوى (Max Score).
-            </p>
-          </div>
+          <ChecklistManager />
         </TabsContent>
 
         <TabsContent value="branches" className="space-y-3 pt-4">
