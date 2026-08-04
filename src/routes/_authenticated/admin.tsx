@@ -43,8 +43,12 @@ function AdminPage() {
   const queryClient = useQueryClient();
   const [importing, setImporting] = useState(false);
   const [typeId, setTypeId] = useState("");
+  const [replaceExisting, setReplaceExisting] = useState(true);
+  const [newTypeName, setNewTypeName] = useState("");
+  const [newTypeCode, setNewTypeCode] = useState("");
   const [branchName, setBranchName] = useState("");
   const [branchCode, setBranchCode] = useState("");
+
 
   const { data } = useQuery({
     queryKey: ["admin-data"],
@@ -68,6 +72,54 @@ function AdminPage() {
     );
   }
 
+  const purgeChecklist = async () => {
+    const { data: oldQuestions } = await supabase.from("questions").select("id").eq("audit_type_id", typeId);
+    const ids = (oldQuestions ?? []).map((q) => q.id);
+    if (ids.length) {
+      const { count } = await supabase
+        .from("audit_answers")
+        .select("id", { count: "exact", head: true })
+        .in("question_id", ids);
+      if (count && count > 0) {
+        // الأسئلة مستخدمة في تدقيقات سابقة: نعطلها بدل حذفها للحفاظ على التقارير
+        await supabase.from("questions").update({ active: false }).eq("audit_type_id", typeId);
+        await supabase.from("sections").update({ active: false }).eq("audit_type_id", typeId);
+        return "archived";
+      }
+      await supabase.from("questions").delete().eq("audit_type_id", typeId);
+    }
+    const { data: oldSections } = await supabase.from("sections").select("id").eq("audit_type_id", typeId);
+    const sectionIds = (oldSections ?? []).map((s) => s.id);
+    if (sectionIds.length) await supabase.from("headers").delete().in("section_id", sectionIds);
+    await supabase.from("sections").delete().eq("audit_type_id", typeId);
+    return "deleted";
+  };
+
+  const addAuditType = async () => {
+    if (!newTypeName.trim() || !newTypeCode.trim()) {
+      toast.error("أدخل اسم النوع والكود");
+      return;
+    }
+    const { data: created, error } = await supabase
+      .from("audit_types")
+      .insert({
+        name_ar: newTypeName.trim().slice(0, 120),
+        name_en: newTypeName.trim().slice(0, 120),
+        code: newTypeCode.trim().slice(0, 40),
+      })
+      .select("id")
+      .single();
+    if (error || !created) {
+      toast.error("تعذر إضافة نوع التدقيق");
+      return;
+    }
+    setNewTypeName("");
+    setNewTypeCode("");
+    setTypeId(created.id);
+    toast.success("تمت إضافة نوع التدقيق");
+    queryClient.invalidateQueries({ queryKey: ["admin-data"] });
+  };
+
   const importChecklist = async (file: File) => {
     if (!typeId) {
       toast.error("اختر نوع التدقيق أولاً");
@@ -75,6 +127,9 @@ function AdminPage() {
     }
     setImporting(true);
     try {
+      let purgeResult: string | null = null;
+      if (replaceExisting) purgeResult = await purgeChecklist();
+
       const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]!]!;
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
@@ -85,6 +140,8 @@ function AdminPage() {
       let headerOrder = 0;
       let itemOrder = 0;
       let imported = 0;
+
+
 
       for (const row of rows) {
         const sectionName = pick(row, ["section", "القسم"]);
@@ -139,7 +196,12 @@ function AdminPage() {
         imported += 1;
       }
 
-      toast.success(`تم استيراد ${imported} سؤالاً`);
+      toast.success(
+        purgeResult === "archived"
+          ? `تم أرشفة الأسئلة القديمة (مستخدمة في تدقيقات سابقة) واستيراد ${imported} سؤالاً`
+          : `تم استيراد ${imported} سؤالاً`,
+      );
+
       queryClient.invalidateQueries();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "تعذر استيراد الملف");
