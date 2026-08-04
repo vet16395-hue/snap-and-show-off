@@ -43,8 +43,12 @@ function AdminPage() {
   const queryClient = useQueryClient();
   const [importing, setImporting] = useState(false);
   const [typeId, setTypeId] = useState("");
+  const [replaceExisting, setReplaceExisting] = useState(true);
+  const [newTypeName, setNewTypeName] = useState("");
+  const [newTypeCode, setNewTypeCode] = useState("");
   const [branchName, setBranchName] = useState("");
   const [branchCode, setBranchCode] = useState("");
+
 
   const { data } = useQuery({
     queryKey: ["admin-data"],
