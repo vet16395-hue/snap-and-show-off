@@ -196,7 +196,12 @@ function AdminPage() {
         imported += 1;
       }
 
-      toast.success(`تم استيراد ${imported} سؤالاً`);
+      toast.success(
+        purgeResult === "archived"
+          ? `تم أرشفة الأسئلة القديمة (مستخدمة في تدقيقات سابقة) واستيراد ${imported} سؤالاً`
+          : `تم استيراد ${imported} سؤالاً`,
+      );
+
       queryClient.invalidateQueries();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "تعذر استيراد الملف");
