@@ -208,7 +208,11 @@ function AuditRunner() {
     const { error } = await supabase
       .from("audit_section_deductions")
       .insert({ audit_id: id, section_id: section.id, reason_text: reason.slice(0, 300), percentage });
-    if (error) return toast.error("تعذر إضافة الخصم");
+    if (error) {
+      toast.error("تعذر إضافة الخصم");
+      return;
+    }
+
     queryClient.invalidateQueries({ queryKey: ["audit", id] });
   };
 
