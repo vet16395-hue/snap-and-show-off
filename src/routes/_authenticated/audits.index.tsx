@@ -41,8 +41,9 @@ function AuditsList() {
         .from("audits")
         .select("id, audit_date, status, branch_manager, branches(name_ar), audit_types(name_ar)")
         .order("audit_date", { ascending: false });
-
+      if (status !== "all") query = query.eq("status", status);
       const { data, error } = await query;
+
       if (error) throw error;
       return data ?? [];
     },
