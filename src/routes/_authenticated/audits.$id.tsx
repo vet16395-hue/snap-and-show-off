@@ -162,7 +162,7 @@ function AuditRunner() {
     );
   }
 
-  const section = data.sections[stepIndex];
+  const section = data.sections[Math.min(stepIndex, data.sections.length - 1)]!;
   const sectionQuestions = data.questions.filter((question) => question.section_id === section.id);
   const isNaSection = !!sectionNa[section.id];
   const branchName = (data.audit.branches as { name_ar: string } | null)?.name_ar ?? "";
