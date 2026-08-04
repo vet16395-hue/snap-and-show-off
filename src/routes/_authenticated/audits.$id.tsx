@@ -243,7 +243,11 @@ function AuditRunner() {
       .update({ status: "submitted", submitted_at: new Date().toISOString() })
       .eq("id", id);
     setSaving(false);
-    if (error) return toast.error("تعذر إنهاء التدقيق");
+    if (error) {
+      toast.error("تعذر إنهاء التدقيق");
+      return;
+    }
+
     toast.success("تم إنهاء التدقيق");
     navigate({ to: "/audits/$id/report", params: { id } });
   };
