@@ -14,16 +14,562 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: []
+      }
+      audit_answers: {
+        Row: {
+          audit_id: string
+          comment: string | null
+          id: string
+          is_na: boolean
+          question_id: string
+          score: number | null
+          updated_at: string
+        }
+        Insert: {
+          audit_id: string
+          comment?: string | null
+          id?: string
+          is_na?: boolean
+          question_id: string
+          score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          audit_id?: string
+          comment?: string | null
+          id?: string
+          is_na?: boolean
+          question_id?: string
+          score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_answers_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_general_deductions: {
+        Row: {
+          audit_id: string
+          created_at: string
+          id: string
+          percentage: number
+          reason_text: string
+        }
+        Insert: {
+          audit_id: string
+          created_at?: string
+          id?: string
+          percentage?: number
+          reason_text?: string
+        }
+        Update: {
+          audit_id?: string
+          created_at?: string
+          id?: string
+          percentage?: number
+          reason_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_general_deductions_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "audits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_section_deductions: {
+        Row: {
+          audit_id: string
+          created_at: string
+          id: string
+          percentage: number
+          reason_text: string
+          section_id: string
+        }
+        Insert: {
+          audit_id: string
+          created_at?: string
+          id?: string
+          percentage?: number
+          reason_text?: string
+          section_id: string
+        }
+        Update: {
+          audit_id?: string
+          created_at?: string
+          id?: string
+          percentage?: number
+          reason_text?: string
+          section_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_section_deductions_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_section_deductions_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_section_status: {
+        Row: {
+          audit_id: string
+          id: string
+          is_na: boolean
+          section_id: string
+        }
+        Insert: {
+          audit_id: string
+          id?: string
+          is_na?: boolean
+          section_id: string
+        }
+        Update: {
+          audit_id?: string
+          id?: string
+          is_na?: boolean
+          section_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_section_status_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_section_status_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_types: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name_ar: string
+          name_en: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name_ar: string
+          name_en: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name_ar?: string
+          name_en?: string
+        }
+        Relationships: []
+      }
+      audits: {
+        Row: {
+          audit_date: string
+          audit_type_id: string
+          auditor_id: string
+          branch_id: string
+          branch_manager: string | null
+          created_at: string
+          created_by: string
+          id: string
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          audit_date?: string
+          audit_type_id: string
+          auditor_id: string
+          branch_id: string
+          branch_manager?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audit_date?: string
+          audit_type_id?: string
+          auditor_id?: string
+          branch_id?: string
+          branch_manager?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audits_audit_type_id_fkey"
+            columns: ["audit_type_id"]
+            isOneToOne: false
+            referencedRelation: "audit_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audits_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branches: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name_ar: string
+          name_en: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name_ar: string
+          name_en?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name_ar?: string
+          name_en?: string | null
+        }
+        Relationships: []
+      }
+      headers: {
+        Row: {
+          created_at: string
+          id: string
+          label_ar: string
+          label_en: string | null
+          order_index: number
+          section_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label_ar: string
+          label_en?: string | null
+          order_index?: number
+          section_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label_ar?: string
+          label_en?: string | null
+          order_index?: number
+          section_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "headers_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photos: {
+        Row: {
+          audit_id: string
+          created_at: string
+          id: string
+          question_id: string
+          storage_path: string
+        }
+        Insert: {
+          audit_id: string
+          created_at?: string
+          id?: string
+          question_id: string
+          storage_path: string
+        }
+        Update: {
+          audit_id?: string
+          created_at?: string
+          id?: string
+          question_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photos_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          active: boolean
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          email?: string
+          full_name?: string
+          id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      questions: {
+        Row: {
+          active: boolean
+          audit_type_id: string
+          created_at: string
+          header_id: string | null
+          id: string
+          item_id: string
+          item_order: number
+          max_score: number
+          requires_photo_if_below_max: boolean
+          section_id: string
+          text_ar: string
+          text_en: string | null
+        }
+        Insert: {
+          active?: boolean
+          audit_type_id: string
+          created_at?: string
+          header_id?: string | null
+          id?: string
+          item_id: string
+          item_order?: number
+          max_score?: number
+          requires_photo_if_below_max?: boolean
+          section_id: string
+          text_ar: string
+          text_en?: string | null
+        }
+        Update: {
+          active?: boolean
+          audit_type_id?: string
+          created_at?: string
+          header_id?: string | null
+          id?: string
+          item_id?: string
+          item_order?: number
+          max_score?: number
+          requires_photo_if_below_max?: boolean
+          section_id?: string
+          text_ar?: string
+          text_en?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_audit_type_id_fkey"
+            columns: ["audit_type_id"]
+            isOneToOne: false
+            referencedRelation: "audit_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_header_id_fkey"
+            columns: ["header_id"]
+            isOneToOne: false
+            referencedRelation: "headers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          audit_id: string
+          docx_path: string | null
+          generated_at: string
+          id: string
+          pdf_path: string | null
+        }
+        Insert: {
+          audit_id: string
+          docx_path?: string | null
+          generated_at?: string
+          id?: string
+          pdf_path?: string | null
+        }
+        Update: {
+          audit_id?: string
+          docx_path?: string | null
+          generated_at?: string
+          id?: string
+          pdf_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "audits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sections: {
+        Row: {
+          active: boolean
+          audit_type_id: string
+          created_at: string
+          id: string
+          is_delivery: boolean
+          name_ar: string
+          name_en: string | null
+          order_index: number
+        }
+        Insert: {
+          active?: boolean
+          audit_type_id: string
+          created_at?: string
+          id?: string
+          is_delivery?: boolean
+          name_ar: string
+          name_en?: string | null
+          order_index?: number
+        }
+        Update: {
+          active?: boolean
+          audit_type_id?: string
+          created_at?: string
+          id?: string
+          is_delivery?: boolean
+          name_ar?: string
+          name_en?: string | null
+          order_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sections_audit_type_id_fkey"
+            columns: ["audit_type_id"]
+            isOneToOne: false
+            referencedRelation: "audit_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_edit_audit: { Args: { _audit_id: string }; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "auditor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +696,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "auditor"],
+    },
   },
 } as const
