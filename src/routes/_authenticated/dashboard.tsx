@@ -8,10 +8,10 @@ import { useSession } from "@/hooks/useSession";
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "لوحة التحكم — SBAS" },
-      { name: "description", content: "لوحة تحكم المدقق: تدقيق جديد، المسودات، والتدقيقات المكتملة." },
-      { property: "og:title", content: "لوحة التحكم — SBAS" },
-      { property: "og:description", content: "إدارة تدقيقات سلامة الغذاء لفروع سعودي." },
+      { title: "Dashboard — SBAS" },
+      { name: "description", content: "Auditor dashboard: start a new audit, resume drafts and review completed audits." },
+      { property: "og:title", content: "Dashboard — SBAS" },
+      { property: "og:description", content: "Manage Seoudi branch food safety audits." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -36,8 +36,8 @@ function Dashboard() {
     {
       to: "/audits/new" as const,
       icon: FilePlus2,
-      title: "تدقيق جديد",
-      body: "ابدأ تدقيقاً جديداً لأحد الفروع",
+      title: "New Audit",
+      body: "Start a new audit for a branch",
       value: "",
       primary: true,
     },
@@ -45,22 +45,22 @@ function Dashboard() {
       to: "/audits" as const,
       search: { status: "draft" as const },
       icon: ClipboardList,
-      title: "المسودات",
-      body: "أكمل التدقيقات غير المنتهية",
+      title: "Draft Audits",
+      body: "Resume audits still in progress",
       value: String(counts?.drafts ?? 0),
     },
     {
       to: "/audits" as const,
       search: { status: "submitted" as const },
       icon: FileCheck2,
-      title: "التدقيقات المكتملة",
-      body: "استعرض النتائج وأنشئ التقارير",
+      title: "Completed Audits",
+      body: "Review results and generate reports",
       value: String(counts?.submitted ?? 0),
     },
   ];
 
   return (
-    <AppShell title={`أهلاً، ${profile?.full_name || profile?.email || ""}`} subtitle="اختر ما تريد القيام به">
+    <AppShell title={`Welcome, ${profile?.full_name || profile?.email || ""}`} subtitle="What would you like to do?">
       <div className="grid gap-4 sm:grid-cols-3">
         {cards.map((card) => (
           <Link

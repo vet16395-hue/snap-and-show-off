@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
 const navItems = [
-  { to: "/dashboard", label: "الرئيسية", icon: LayoutDashboard },
-  { to: "/audits", label: "التدقيقات", icon: ClipboardList },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/audits", label: "Audits", icon: ClipboardList },
 ] as const;
 
 export function AppShell({
@@ -36,7 +36,7 @@ export function AppShell({
   };
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir="ltr">
       <header className="brand-banner sticky top-0 z-30 shadow-[var(--shadow-card)]">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
           <Link to="/dashboard" className="flex items-center gap-2">
@@ -44,12 +44,12 @@ export function AppShell({
               S
             </span>
             <span className="hidden text-sm font-semibold leading-tight sm:block">
-              نظام تدقيق فروع سعودي
+              Seoudi Branches Audit System
               <span className="block text-[11px] font-normal opacity-80">SBAS</span>
             </span>
           </Link>
 
-          <nav className="mr-auto flex items-center gap-1">
+          <nav className="ml-auto flex items-center gap-1">
             {navItems.map((item) => (
               <Link
                 key={item.to}
@@ -76,10 +76,10 @@ export function AppShell({
                 )}
               >
                 <Settings className="size-4" />
-                <span className="hidden sm:inline">الإدارة</span>
+                <span className="hidden sm:inline">Admin</span>
               </Link>
             )}
-            <Button variant="ghost" size="sm" onClick={signOut} className="hover:bg-primary-soft/60">
+            <Button variant="ghost" size="sm" onClick={signOut} className="hover:bg-primary-soft/60" aria-label="Sign out">
               <LogOut className="size-4" />
             </Button>
           </nav>
@@ -93,7 +93,7 @@ export function AppShell({
               {title && <h1 className="text-lg font-bold sm:text-xl">{title}</h1>}
               {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
             </div>
-            <div className="mr-auto flex items-center gap-2">{action}</div>
+            <div className="ml-auto flex items-center gap-2">{action}</div>
           </div>
         </div>
       )}
@@ -103,7 +103,7 @@ export function AppShell({
       <footer className="no-print border-t border-border py-4 text-center text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <ShieldCheck className="size-3.5" />
-          {profile?.full_name || profile?.email} · {isAdmin ? "مدير النظام" : "مدقق"}
+          {profile?.full_name || profile?.email} · {isAdmin ? "Administrator" : "Auditor"}
         </span>
       </footer>
     </div>
