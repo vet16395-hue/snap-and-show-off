@@ -13,10 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export const Route = createFileRoute("/_authenticated/audits/new")({
   head: () => ({
     meta: [
-      { title: "تدقيق جديد — SBAS" },
-      { name: "description", content: "إنشاء تدقيق جديد: اختر الفرع، نوع التدقيق، التاريخ والمدقق." },
-      { property: "og:title", content: "تدقيق جديد — SBAS" },
-      { property: "og:description", content: "إنشاء تدقيق جديد لأحد فروع سعودي." },
+      { title: "New Audit — SBAS" },
+      { name: "description", content: "Create a new audit: pick the branch, audit type, date and auditor." },
+      { property: "og:title", content: "New Audit — SBAS" },
+      { property: "og:description", content: "Start a new Seoudi branch audit." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -38,7 +38,7 @@ function NewAudit() {
     queryFn: async () => {
       const [branches, types, auditors] = await Promise.all([
         supabase.from("branches").select("id, name_ar, code").eq("active", true).order("name_ar"),
-        supabase.from("audit_types").select("id, name_ar").eq("active", true).order("name_ar"),
+        supabase.from("audit_types").select("id, name_ar, name_en").eq("active", true).order("name_en"),
         supabase.from("profiles").select("id, full_name, email").eq("active", true).order("full_name"),
       ]);
       return {
@@ -51,7 +51,7 @@ function NewAudit() {
 
   const create = async () => {
     if (!branchId || !typeId || !auditorId) {
-      toast.error("اختر الفرع ونوع التدقيق والمدقق");
+      toast.error("Select a branch, audit type and auditor");
       return;
     }
     setSaving(true);
@@ -68,43 +68,52 @@ function NewAudit() {
       .single();
     setSaving(false);
     if (error || !created) {
-      toast.error(error?.message ?? "تعذر إنشاء التدقيق");
+      toast.error(error?.message ?? "Unable to create the audit");
       return;
     }
     navigate({ to: "/audits/$id", params: { id: created.id } });
   };
 
   return (
-    <AppShell title="تدقيق جديد" subtitle="بيانات الزيارة">
+    <AppShell title="New Audit" subtitle="Visit details">
       <div className="surface-card mx-auto max-w-lg space-y-4 p-5">
         <div className="space-y-1.5">
-          <Label>الفرع</Label>
-          <Select value={branchId} onValueChange={setBranchId}>
-            <SelectTrigger><SelectValue placeholder="اختر الفرع" /></SelectTrigger>
-            <SelectContent>
-              {data?.branches.map((branch) => (
-                <SelectItem key={branch.id} value={branch.id}>{branch.name_ar}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>نوع التدقيق</Label>
+          <Label>Audit Type</Label>
           <Select value={typeId} onValueChange={setTypeId}>
-            <SelectTrigger><SelectValue placeholder="اختر النوع" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Select audit type" /></SelectTrigger>
             <SelectContent>
               {data?.types.map((type) => (
-                <SelectItem key={type.id} value={type.id}>{type.name_ar}</SelectItem>
+                <SelectItem key={type.id} value={type.id}>
+                  {type.name_en || type.name_ar}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-1.5">
-          <Label>المدقق</Label>
+          <Label>Branch</Label>
+          <Select value={branchId} onValueChange={setBranchId}>
+            <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+            <SelectContent>
+              {data?.branches.map((branch) => (
+                <SelectItem key={branch.id} value={branch.id}>
+                  <span dir="rtl">{branch.name_ar}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="manager">Branch Manager</Label>
+          <Input id="manager" value={manager} maxLength={120} onChange={(event) => setManager(event.target.value)} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Auditor</Label>
           <Select value={auditorId} onValueChange={setAuditorId}>
-            <SelectTrigger><SelectValue placeholder="اختر المدقق" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Select auditor" /></SelectTrigger>
             <SelectContent>
               {data?.auditors.map((auditor) => (
                 <SelectItem key={auditor.id} value={auditor.id}>
@@ -116,17 +125,12 @@ function NewAudit() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="date">تاريخ التدقيق</Label>
+          <Label htmlFor="date">Audit Date</Label>
           <Input id="date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="manager">مدير الفرع</Label>
-          <Input id="manager" value={manager} maxLength={120} onChange={(event) => setManager(event.target.value)} />
-        </div>
-
         <Button className="w-full" size="lg" disabled={saving} onClick={create}>
-          بدء التدقيق
+          Start Audit
         </Button>
       </div>
     </AppShell>

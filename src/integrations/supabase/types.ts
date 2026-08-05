@@ -77,6 +77,41 @@ export type Database = {
           },
         ]
       }
+      audit_edit_logs: {
+        Row: {
+          action: string
+          audit_id: string
+          created_at: string
+          detail: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action?: string
+          audit_id: string
+          created_at?: string
+          detail?: string
+          id?: string
+          user_id?: string
+        }
+        Update: {
+          action?: string
+          audit_id?: string
+          created_at?: string
+          detail?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_edit_logs_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "audits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_general_deductions: {
         Row: {
           audit_id: string
@@ -192,6 +227,7 @@ export type Database = {
           active: boolean
           code: string
           created_at: string
+          description: string
           id: string
           name_ar: string
           name_en: string
@@ -200,6 +236,7 @@ export type Database = {
           active?: boolean
           code: string
           created_at?: string
+          description?: string
           id?: string
           name_ar: string
           name_en: string
@@ -208,6 +245,7 @@ export type Database = {
           active?: boolean
           code?: string
           created_at?: string
+          description?: string
           id?: string
           name_ar?: string
           name_en?: string
@@ -223,10 +261,12 @@ export type Database = {
           branch_manager: string | null
           created_at: string
           created_by: string
+          edited_at: string | null
           id: string
           status: string
           submitted_at: string | null
           updated_at: string
+          version: number
         }
         Insert: {
           audit_date?: string
@@ -236,10 +276,12 @@ export type Database = {
           branch_manager?: string | null
           created_at?: string
           created_by?: string
+          edited_at?: string | null
           id?: string
           status?: string
           submitted_at?: string | null
           updated_at?: string
+          version?: number
         }
         Update: {
           audit_date?: string
@@ -249,10 +291,12 @@ export type Database = {
           branch_manager?: string | null
           created_at?: string
           created_by?: string
+          edited_at?: string | null
           id?: string
           status?: string
           submitted_at?: string | null
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {

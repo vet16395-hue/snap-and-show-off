@@ -11,10 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "تسجيل الدخول — SBAS" },
-      { name: "description", content: "تسجيل دخول مدققي سلامة الغذاء إلى نظام تدقيق فروع سعودي." },
-      { property: "og:title", content: "تسجيل الدخول — SBAS" },
-      { property: "og:description", content: "الدخول إلى نظام تدقيق فروع سعودي." },
+      { title: "Sign In — SBAS" },
+      { name: "description", content: "Sign in to the Seoudi Branches Audit System to run food safety audits." },
+      { property: "og:title", content: "Sign In — SBAS" },
+      { property: "og:description", content: "Access the Seoudi Branches Audit System." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -22,8 +22,8 @@ export const Route = createFileRoute("/auth")({
 });
 
 const credentials = z.object({
-  email: z.string().trim().email({ message: "بريد إلكتروني غير صحيح" }).max(255),
-  password: z.string().min(8, { message: "كلمة المرور 8 أحرف على الأقل" }).max(72),
+  email: z.string().trim().email({ message: "Enter a valid email address" }).max(255),
+  password: z.string().min(8, { message: "Password must be at least 8 characters" }).max(72),
 });
 
 function AuthPage() {
@@ -36,7 +36,7 @@ function AuthPage() {
   const submit = async (mode: "signin" | "signup") => {
     const parsed = credentials.safeParse({ email, password });
     if (!parsed.success) {
-      toast.error(parsed.error.issues[0]?.message ?? "بيانات غير صحيحة");
+      toast.error(parsed.error.issues[0]?.message ?? "Invalid credentials");
       return;
     }
     setLoading(true);
@@ -58,77 +58,75 @@ function AuthPage() {
       if (data.session) {
         navigate({ to: "/dashboard", replace: true });
       } else {
-        toast.success("تم إنشاء الحساب، تحقق من بريدك الإلكتروني لتأكيد الحساب");
+        toast.success("Account created — check your email to confirm it");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "تعذر تسجيل الدخول");
+      toast.error(error instanceof Error ? error.message : "Unable to sign in");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10" dir="rtl">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10" dir="ltr">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <span className="mx-auto grid size-14 place-items-center rounded-2xl brand-banner text-2xl font-bold">
             S
           </span>
-          <h1 className="mt-4 text-xl font-extrabold">نظام تدقيق فروع سعودي</h1>
-          <p className="text-xs text-muted-foreground">Seoudi Branches Audit System</p>
+          <h1 className="mt-4 text-xl font-extrabold">Seoudi Branches Audit System</h1>
+          <p className="text-xs text-muted-foreground">Food safety auditing · SBAS</p>
         </div>
 
         <div className="surface-card p-5">
           <Tabs defaultValue="signin">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">دخول</TabsTrigger>
-              <TabsTrigger value="signup">حساب جديد</TabsTrigger>
+              <TabsTrigger value="signin">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Create Account</TabsTrigger>
             </TabsList>
 
             <TabsContent value="signin" className="space-y-4 pt-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email">البريد الإلكتروني</Label>
-                <Input id="email" type="email" dir="ltr" value={email} onChange={(event) => setEmail(event.target.value)} />
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="password">كلمة المرور</Label>
+                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
-                  dir="ltr"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
               </div>
               <Button className="w-full" size="lg" disabled={loading} onClick={() => submit("signin")}>
-                تسجيل الدخول
+                Sign In
               </Button>
             </TabsContent>
 
             <TabsContent value="signup" className="space-y-4 pt-4">
               <div className="space-y-1.5">
-                <Label htmlFor="name">الاسم الكامل</Label>
+                <Label htmlFor="name">Full Name</Label>
                 <Input id="name" value={fullName} onChange={(event) => setFullName(event.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="email2">البريد الإلكتروني</Label>
-                <Input id="email2" type="email" dir="ltr" value={email} onChange={(event) => setEmail(event.target.value)} />
+                <Label htmlFor="email2">Email</Label>
+                <Input id="email2" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="password2">كلمة المرور</Label>
+                <Label htmlFor="password2">Password</Label>
                 <Input
                   id="password2"
                   type="password"
-                  dir="ltr"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
               </div>
               <Button className="w-full" size="lg" disabled={loading} onClick={() => submit("signup")}>
-                إنشاء حساب
+                Create Account
               </Button>
               <p className="text-center text-xs text-muted-foreground">
-                أول حساب يتم إنشاؤه يحصل على صلاحيات مدير النظام.
+                The first account created becomes the system administrator.
               </p>
             </TabsContent>
           </Tabs>
