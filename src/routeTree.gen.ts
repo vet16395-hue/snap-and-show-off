@@ -18,6 +18,7 @@ import { Route as AuthenticatedAuditsIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAuditsIdRouteImport } from './routes/_authenticated/audits.$id'
 import { Route as AuthenticatedAuditsNewRouteImport } from './routes/_authenticated/audits.new'
 import { Route as AuthenticatedAuditsIdReportRouteImport } from './routes/_authenticated/audits.$id.report'
+import { Route as AuthenticatedAuditsIdSummaryRouteImport } from './routes/_authenticated/audits.$id.summary'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -65,6 +66,12 @@ const AuthenticatedAuditsIdReportRoute =
     path: '/report',
     getParentRoute: () => AuthenticatedAuditsIdRoute,
   } as any)
+const AuthenticatedAuditsIdSummaryRoute =
+  AuthenticatedAuditsIdSummaryRouteImport.update({
+    id: '/summary',
+    path: '/summary',
+    getParentRoute: () => AuthenticatedAuditsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/audits/new': typeof AuthenticatedAuditsNewRoute
   '/audits/': typeof AuthenticatedAuditsIndexRoute
   '/audits/$id/report': typeof AuthenticatedAuditsIdReportRoute
+  '/audits/$id/summary': typeof AuthenticatedAuditsIdSummaryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -85,6 +93,7 @@ export interface FileRoutesByTo {
   '/audits/new': typeof AuthenticatedAuditsNewRoute
   '/audits': typeof AuthenticatedAuditsIndexRoute
   '/audits/$id/report': typeof AuthenticatedAuditsIdReportRoute
+  '/audits/$id/summary': typeof AuthenticatedAuditsIdSummaryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -97,6 +106,7 @@ export interface FileRoutesById {
   '/_authenticated/audits/new': typeof AuthenticatedAuditsNewRoute
   '/_authenticated/audits/': typeof AuthenticatedAuditsIndexRoute
   '/_authenticated/audits/$id/report': typeof AuthenticatedAuditsIdReportRoute
+  '/_authenticated/audits/$id/summary': typeof AuthenticatedAuditsIdSummaryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/audits/new'
     | '/audits/'
     | '/audits/$id/report'
+    | '/audits/$id/summary'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/audits/new'
     | '/audits'
     | '/audits/$id/report'
+    | '/audits/$id/summary'
   id:
     | '__root__'
     | '/'
@@ -130,6 +142,7 @@ export interface FileRouteTypes {
     | '/_authenticated/audits/new'
     | '/_authenticated/audits/'
     | '/_authenticated/audits/$id/report'
+    | '/_authenticated/audits/$id/summary'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -203,15 +216,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAuditsIdReportRouteImport
       parentRoute: typeof AuthenticatedAuditsIdRoute
     }
+    '/_authenticated/audits/$id/summary': {
+      id: '/_authenticated/audits/$id/summary'
+      path: '/summary'
+      fullPath: '/audits/$id/summary'
+      preLoaderRoute: typeof AuthenticatedAuditsIdSummaryRouteImport
+      parentRoute: typeof AuthenticatedAuditsIdRoute
+    }
   }
 }
 
 interface AuthenticatedAuditsIdRouteChildren {
   AuthenticatedAuditsIdReportRoute: typeof AuthenticatedAuditsIdReportRoute
+  AuthenticatedAuditsIdSummaryRoute: typeof AuthenticatedAuditsIdSummaryRoute
 }
 
 const AuthenticatedAuditsIdRouteChildren: AuthenticatedAuditsIdRouteChildren = {
   AuthenticatedAuditsIdReportRoute: AuthenticatedAuditsIdReportRoute,
+  AuthenticatedAuditsIdSummaryRoute: AuthenticatedAuditsIdSummaryRoute,
 }
 
 const AuthenticatedAuditsIdRouteWithChildren =

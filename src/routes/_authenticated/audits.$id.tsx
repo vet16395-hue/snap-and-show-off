@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Camera, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react";
+import { Camera, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -11,16 +11,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { computeAudit, countUnanswered, type ScoringSection } from "@/lib/scoring";
+import { computeAudit, type ScoringSection } from "@/lib/scoring";
 import { deletePhoto, signedPhotoUrls, uploadQuestionPhoto } from "@/lib/photos";
 
 export const Route = createFileRoute("/_authenticated/audits/$id")({
   head: () => ({
     meta: [
-      { title: "تنفيذ التدقيق — SBAS" },
-      { name: "description", content: "تنفيذ التدقيق قسماً بقسم مع التقييم والصور والخصومات." },
-      { property: "og:title", content: "تنفيذ التدقيق — SBAS" },
-      { property: "og:description", content: "شاشة تنفيذ تدقيق فرع سعودي." },
+      { title: "Run Audit — SBAS" },
+      { name: "description", content: "Score the checklist section by section, add comments, photos and deductions." },
+      { property: "og:title", content: "Run Audit — SBAS" },
+      { property: "og:description", content: "Seoudi branch audit execution screen." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -28,10 +28,10 @@ export const Route = createFileRoute("/_authenticated/audits/$id")({
 });
 
 const SCORE_OPTIONS = [
-  { value: 4, label: "4 — مطابق" },
-  { value: 2, label: "2 — مطابق جزئياً" },
-  { value: 1, label: "1 — ضعيف" },
-  { value: 0, label: "0 — غير مطابق" },
+  { value: 4, label: "4 — Compliant" },
+  { value: 2, label: "2 — Partial" },
+  { value: 1, label: "1 — Poor" },
+  { value: 0, label: "0 — Non-compliant" },
 ];
 
 type AnswerState = { score: number | null; isNa: boolean; comment: string };
@@ -43,7 +43,6 @@ function AuditRunner() {
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
   const [sectionNa, setSectionNa] = useState<Record<string, boolean>>({});
-  const [saving, setSaving] = useState(false);
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const { data, isLoading } = useQuery({
@@ -51,7 +50,7 @@ function AuditRunner() {
     queryFn: async () => {
       const { data: audit, error } = await supabase
         .from("audits")
-        .select("id, status, audit_date, audit_type_id, branch_manager, branches(name_ar), audit_types(name_ar)")
+        .select("id, status, version, audit_date, audit_type_id, branch_manager, branches(name_ar), audit_types(name_ar)")
         .eq("id", id)
         .single();
       if (error) throw error;
@@ -146,17 +145,17 @@ function AuditRunner() {
 
   if (isLoading || !data) {
     return (
-      <AppShell title="تنفيذ التدقيق">
-        <p className="text-sm text-muted-foreground">جارٍ التحميل…</p>
+      <AppShell title="Run Audit">
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </AppShell>
     );
   }
 
   if (data.sections.length === 0) {
     return (
-      <AppShell title="تنفيذ التدقيق" subtitle="لا توجد قائمة فحص">
+      <AppShell title="Run Audit" subtitle="No checklist available">
         <div className="surface-card p-8 text-center text-sm text-muted-foreground">
-          لم يتم استيراد قائمة الفحص لهذا النوع من التدقيق بعد. توجّه إلى صفحة الإدارة لاستيراد ملف Excel.
+          No checklist has been set up for this audit type yet. Go to Admin → Checklist to import or build one.
         </div>
       </AppShell>
     );
@@ -181,7 +180,7 @@ function AuditRunner() {
         },
         { onConflict: "audit_id,question_id" },
       );
-      if (error) toast.error("تعذر حفظ الإجابة");
+      if (error) toast.error("Could not save the answer");
     }, 400);
   };
 
@@ -201,7 +200,7 @@ function AuditRunner() {
     const { error } = await supabase
       .from("audit_section_status")
       .upsert({ audit_id: id, section_id: section.id, is_na: value }, { onConflict: "audit_id,section_id" });
-    if (error) toast.error("تعذر تحديث حالة القسم");
+    if (error) toast.error("Could not update the section status");
   };
 
   const addSectionDeduction = async (reason: string, percentage: number) => {
@@ -209,10 +208,9 @@ function AuditRunner() {
       .from("audit_section_deductions")
       .insert({ audit_id: id, section_id: section.id, reason_text: reason.slice(0, 300), percentage });
     if (error) {
-      toast.error("تعذر إضافة الخصم");
+      toast.error("Could not add the deduction");
       return;
     }
-
     queryClient.invalidateQueries({ queryKey: ["audit", id] });
   };
 
@@ -225,31 +223,10 @@ function AuditRunner() {
     try {
       await uploadQuestionPhoto(id, questionId, file);
       queryClient.invalidateQueries({ queryKey: ["audit", id] });
-      toast.success("تم رفع الصورة");
+      toast.success("Photo uploaded");
     } catch {
-      toast.error("تعذر رفع الصورة");
+      toast.error("Could not upload the photo");
     }
-  };
-
-  const submitAudit = async () => {
-    const remaining = countUnanswered(scoringSections, answers);
-    if (remaining > 0) {
-      toast.error(`تبقّى ${remaining} سؤالاً بدون إجابة`);
-      return;
-    }
-    setSaving(true);
-    const { error } = await supabase
-      .from("audits")
-      .update({ status: "submitted", submitted_at: new Date().toISOString() })
-      .eq("id", id);
-    setSaving(false);
-    if (error) {
-      toast.error("تعذر إنهاء التدقيق");
-      return;
-    }
-
-    toast.success("تم إنهاء التدقيق");
-    navigate({ to: "/audits/$id/report", params: { id } });
   };
 
   const currentDeductions = data.sectionDeductions.filter((deduction) => deduction.section_id === section.id);
@@ -258,9 +235,14 @@ function AuditRunner() {
   return (
     <AppShell
       title={branchName}
-      subtitle={`${data.audit.audit_date} · القسم ${stepIndex + 1} من ${data.sections.length}`}
+      subtitle={`${data.audit.audit_date} · Section ${stepIndex + 1} of ${data.sections.length}`}
       action={
-        <Badge variant={readOnly ? "default" : "outline"}>{readOnly ? "مكتمل" : "مسودة"}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={readOnly ? "default" : "outline"}>{readOnly ? "Completed" : "Draft"}</Badge>
+          <Button variant="outline" size="sm" onClick={() => navigate({ to: "/audits/$id/summary", params: { id } })}>
+            Summary
+          </Button>
+        </div>
       }
     >
       <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -270,15 +252,31 @@ function AuditRunner() {
         />
       </div>
 
+      <div className="mb-4 flex flex-wrap gap-1.5">
+        {data.sections.map((entry, index) => (
+          <button
+            key={entry.id}
+            onClick={() => setStepIndex(index)}
+            className={
+              index === stepIndex
+                ? "rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground"
+                : "rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted"
+            }
+          >
+            {index + 1}
+          </button>
+        ))}
+      </div>
+
       <div className="surface-card mb-4 flex flex-wrap items-center gap-3 p-4">
-        <div>
+        <div dir="rtl" className="text-right">
           <h2 className="text-lg font-bold">{section.name_ar}</h2>
           {section.is_delivery && (
-            <span className="text-xs text-muted-foreground">قسم التوصيل — يُحتسب بشكل منفصل</span>
+            <span className="text-xs text-muted-foreground">Delivery section — scored separately</span>
           )}
         </div>
-        <div className="mr-auto flex items-center gap-2 text-sm">
-          <Label htmlFor="section-na">القسم غير منطبق</Label>
+        <div className="ml-auto flex items-center gap-2 text-sm">
+          <Label htmlFor="section-na">Section not applicable</Label>
           <Switch id="section-na" checked={isNaSection} onCheckedChange={toggleSectionNa} disabled={readOnly} />
         </div>
       </div>
@@ -297,12 +295,13 @@ function AuditRunner() {
 
             return (
               <div key={question.id} className="surface-card p-4">
-                {header && <div className="text-xs font-semibold text-primary">{header.label_ar}</div>}
-                <div className="mt-1 space-y-1">
-                  <div className="text-[11px] text-muted-foreground" dir="ltr">{question.item_id}</div>
+                <div dir="rtl" className="text-right">
+                  {header && <div className="text-xs font-semibold text-primary">{header.label_ar}</div>}
+                  <div className="mt-1 text-[11px] text-muted-foreground" dir="ltr">
+                    {question.item_id}
+                  </div>
                   <p className="text-sm font-semibold leading-relaxed">{question.text_ar}</p>
                 </div>
-
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   {SCORE_OPTIONS.filter((option) => option.value <= question.max_score).map((option) => (
@@ -322,13 +321,13 @@ function AuditRunner() {
                     disabled={readOnly}
                     onClick={() => updateAnswer(question.id, { isNa: !answer.isNa, score: null })}
                   >
-                    غير منطبق
+                    N/A
                   </Button>
                 </div>
 
                 <Textarea
                   className="mt-3"
-                  placeholder="ملاحظات"
+                  placeholder="Comments"
                   maxLength={1000}
                   value={answer.comment}
                   disabled={readOnly}
@@ -338,7 +337,7 @@ function AuditRunner() {
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {!readOnly && (
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input px-3 py-2 text-sm">
-                      <Camera className="size-4" /> إضافة صورة
+                      <Camera className="size-4" /> Add photo
                       <input
                         type="file"
                         accept="image/*"
@@ -353,20 +352,20 @@ function AuditRunner() {
                     </label>
                   )}
                   {needsPhoto && questionPhotos.length === 0 && (
-                    <span className="text-xs text-destructive">مطلوب إرفاق صورة عند التقييم الأقل من الحد الأقصى</span>
+                    <span className="text-xs text-destructive">A photo is required when scoring below the maximum</span>
                   )}
                   {questionPhotos.map((photo) => (
                     <div key={photo.id} className="relative">
                       <img
                         src={photoUrls?.[photo.storage_path]}
-                        alt={`صورة توثيق للسؤال ${question.item_id}`}
+                        alt={`Audit evidence for item ${question.item_id}`}
                         loading="lazy"
                         className="size-16 rounded-md object-cover"
                       />
                       {!readOnly && (
                         <button
-                          className="absolute -top-2 -left-2 grid size-6 place-items-center rounded-full bg-destructive text-destructive-foreground"
-                          aria-label="حذف الصورة"
+                          className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full bg-destructive text-destructive-foreground"
+                          aria-label="Delete photo"
                           onClick={async () => {
                             await deletePhoto(photo.id, photo.storage_path);
                             queryClient.invalidateQueries({ queryKey: ["audit", id] });
@@ -391,33 +390,33 @@ function AuditRunner() {
 
           {sectionResult && (
             <div className="surface-card flex flex-wrap gap-4 p-4 text-sm">
-              <span>الدرجة: <strong>{sectionResult.rawScore}</strong> / {sectionResult.max}</span>
-              <span>الخصم الداخلي: <strong>{sectionResult.deductionPercentage}%</strong></span>
-              <span>النهائي: <strong>{sectionResult.percentage}%</strong></span>
+              <span>
+                Score: <strong>{sectionResult.rawScore}</strong> / {sectionResult.max}
+              </span>
+              <span>
+                Internal deduction: <strong>{sectionResult.deductionPercentage}%</strong>
+              </span>
+              <span>
+                Final: <strong>{sectionResult.percentage}%</strong>
+              </span>
             </div>
           )}
         </div>
       )}
 
       <div className="mt-6 flex items-center gap-2">
-        <Button
-          variant="outline"
-          disabled={stepIndex === 0}
-          onClick={() => setStepIndex((index) => index - 1)}
-        >
-          <ChevronRight className="size-4" /> السابق
+        <Button variant="outline" disabled={stepIndex === 0} onClick={() => setStepIndex((index) => index - 1)}>
+          <ChevronLeft className="size-4" /> Previous
         </Button>
         {stepIndex < data.sections.length - 1 ? (
-          <Button className="mr-auto" onClick={() => setStepIndex((index) => index + 1)}>
-            التالي <ChevronLeft className="size-4" />
-          </Button>
-        ) : readOnly ? (
-          <Button asChild className="mr-auto">
-            <Link to="/audits/$id/report" params={{ id }}>عرض التقرير</Link>
+          <Button className="ml-auto" onClick={() => setStepIndex((index) => index + 1)}>
+            Next <ChevronRight className="size-4" />
           </Button>
         ) : (
-          <Button className="mr-auto" disabled={saving} onClick={submitAudit}>
-            {saving && <Loader2 className="size-4 animate-spin" />} إنهاء التدقيق
+          <Button asChild className="ml-auto">
+            <Link to="/audits/$id/summary" params={{ id }}>
+              Review summary <ChevronRight className="size-4" />
+            </Link>
           </Button>
         )}
       </div>
@@ -441,14 +440,14 @@ function SectionDeductions({
 
   return (
     <div className="surface-card p-4">
-      <h3 className="text-sm font-bold">الخصومات الداخلية للقسم</h3>
+      <h3 className="text-sm font-bold">Internal section deductions</h3>
       <div className="mt-3 space-y-2">
         {deductions.map((deduction) => (
           <div key={deduction.id} className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm">
             <span>{deduction.reason_text}</span>
-            <strong className="mr-auto">{deduction.percentage}%</strong>
+            <strong className="ml-auto">{deduction.percentage}%</strong>
             {!readOnly && (
-              <button aria-label="حذف الخصم" onClick={() => onRemove(deduction.id)}>
+              <button aria-label="Delete deduction" onClick={() => onRemove(deduction.id)}>
                 <Trash2 className="size-4 text-destructive" />
               </button>
             )}
@@ -459,7 +458,7 @@ function SectionDeductions({
         <div className="mt-3 flex flex-wrap gap-2">
           <Input
             className="flex-1"
-            placeholder="سبب الخصم"
+            placeholder="Deduction reason"
             maxLength={300}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
@@ -478,7 +477,7 @@ function SectionDeductions({
             onClick={() => {
               const value = Number(percentage);
               if (!reason.trim() || !Number.isFinite(value) || value <= 0 || value > 100) {
-                toast.error("أدخل سبباً ونسبة بين 1 و 100");
+                toast.error("Enter a reason and a percentage between 1 and 100");
                 return;
               }
               onAdd(reason.trim(), value);
@@ -486,7 +485,7 @@ function SectionDeductions({
               setPercentage("");
             }}
           >
-            إضافة
+            Add
           </Button>
         </div>
       )}
