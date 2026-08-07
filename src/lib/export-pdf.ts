@@ -6,6 +6,54 @@ import { jsPDF } from "jspdf";
  * Rendering through the browser guarantees correctly shaped Arabic script,
  * which font-embedding PDF writers cannot do on their own.
  */
+const COLOR_PROPS = [
+  "color",
+  "backgroundColor",
+  "borderTopColor",
+  "borderRightColor",
+  "borderBottomColor",
+  "borderLeftColor",
+  "outlineColor",
+  "textDecorationColor",
+  "fill",
+  "stroke",
+] as const;
+
+/** html2canvas cannot parse modern colour spaces, so resolve them to rgb via the canvas API. */
+function toRgb(value: string, cache: Map<string, string>): string {
+  const cached = cache.get(value);
+  if (cached) return cached;
+  const probe = document.createElement("canvas");
+  probe.width = 1;
+  probe.height = 1;
+  const context = probe.getContext("2d", { willReadFrequently: true });
+  let result = "rgb(0, 0, 0)";
+  if (context) {
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = value;
+    context.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = context.getImageData(0, 0, 1, 1).data;
+    result = `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(3)})`;
+  }
+  cache.set(value, result);
+  return result;
+}
+
+function normaliseColors(root: HTMLElement) {
+  const cache = new Map<string, string>();
+  const nodes = [root, ...Array.from(root.querySelectorAll<HTMLElement>("*"))];
+  nodes.forEach((node) => {
+    const computed = node.ownerDocument.defaultView?.getComputedStyle(node);
+    if (!computed) return;
+    COLOR_PROPS.forEach((prop) => {
+      const value = computed[prop] as string | undefined;
+      if (value && value.includes("oklch")) node.style.setProperty(prop.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`), toRgb(value, cache));
+    });
+    if (computed.boxShadow?.includes("oklch")) node.style.boxShadow = "none";
+    if (computed.backgroundImage?.includes("oklch")) node.style.backgroundImage = "none";
+  });
+}
+
 export async function nodeToPdfBlob(node: HTMLElement): Promise<Blob> {
   const canvas = await html2canvas(node, {
     scale: 2,
@@ -13,7 +61,9 @@ export async function nodeToPdfBlob(node: HTMLElement): Promise<Blob> {
     useCORS: true,
     logging: false,
     windowWidth: node.scrollWidth,
+    onclone: (_doc, element) => normaliseColors(element as HTMLElement),
   });
+
 
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const pageWidthMm = pdf.internal.pageSize.getWidth();
