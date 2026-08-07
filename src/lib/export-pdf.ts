@@ -32,8 +32,9 @@ function toRgb(value: string, cache: Map<string, string>): string {
     context.clearRect(0, 0, 1, 1);
     context.fillStyle = value;
     context.fillRect(0, 0, 1, 1);
-    const [r, g, b, a] = context.getImageData(0, 0, 1, 1).data;
-    result = `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(3)})`;
+    const data = context.getImageData(0, 0, 1, 1).data;
+    result = `rgba(${data[0]}, ${data[1]}, ${data[2]}, ${((data[3] ?? 255) / 255).toFixed(3)})`;
+
   }
   cache.set(value, result);
   return result;
