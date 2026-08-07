@@ -47,18 +47,32 @@ function normaliseDocument(doc: Document) {
 
   // 1. Resolve design-token custom properties declared on :root / html.
   const rootStyles = view.getComputedStyle(doc.documentElement);
-  const overrides: string[] = [];
+  const names = new Set<string>();
   for (let i = 0; i < rootStyles.length; i += 1) {
     const name = rootStyles.item(i);
-    if (!name.startsWith("--")) continue;
-    const value = rootStyles.getPropertyValue(name);
-    if (value.includes("oklch")) overrides.push(`${name}: ${toRgb(value.trim(), cache)};`);
+    if (name.startsWith("--")) names.add(name);
   }
+  Array.from(doc.styleSheets).forEach((sheet) => {
+    try {
+      Array.from(sheet.cssRules).forEach((rule) => {
+        (rule.cssText.match(/--[\w-]+/g) ?? []).forEach((name) => names.add(name));
+      });
+    } catch {
+      /* cross-origin sheet */
+    }
+  });
+
+  const overrides: string[] = [];
+  names.forEach((name) => {
+    const value = rootStyles.getPropertyValue(name).trim();
+    if (value.includes("oklch")) overrides.push(`${name}: ${toRgb(value, cache)};`);
+  });
   if (overrides.length) {
     const style = doc.createElement("style");
-    style.textContent = `:root, html, body, * { ${overrides.join(" ")} }`;
+    style.textContent = `:root, html, body, *, *::before, *::after { ${overrides.join(" ")} }`;
     doc.head.appendChild(style);
   }
+
 
   // 2. Flatten anything still computing to oklch.
   const nodes = Array.from(doc.querySelectorAll<HTMLElement>("*"));
