@@ -40,15 +40,38 @@ function toRgb(value: string, cache: Map<string, string>): string {
   return result;
 }
 
-function normaliseColors(root: HTMLElement) {
+/** Rewrites every oklch custom property and inline colour in the cloned document. */
+function normaliseDocument(doc: Document) {
   const cache = new Map<string, string>();
-  const nodes = [root, ...Array.from(root.querySelectorAll<HTMLElement>("*"))];
+  const view = doc.defaultView ?? window;
+
+  // 1. Resolve design-token custom properties declared on :root / html.
+  const rootStyles = view.getComputedStyle(doc.documentElement);
+  const overrides: string[] = [];
+  for (let i = 0; i < rootStyles.length; i += 1) {
+    const name = rootStyles.item(i);
+    if (!name.startsWith("--")) continue;
+    const value = rootStyles.getPropertyValue(name);
+    if (value.includes("oklch")) overrides.push(`${name}: ${toRgb(value.trim(), cache)};`);
+  }
+  if (overrides.length) {
+    const style = doc.createElement("style");
+    style.textContent = `:root, html, body, * { ${overrides.join(" ")} }`;
+    doc.head.appendChild(style);
+  }
+
+  // 2. Flatten anything still computing to oklch.
+  const nodes = Array.from(doc.querySelectorAll<HTMLElement>("*"));
   nodes.forEach((node) => {
-    const computed = node.ownerDocument.defaultView?.getComputedStyle(node);
-    if (!computed) return;
+    const computed = view.getComputedStyle(node);
     COLOR_PROPS.forEach((prop) => {
       const value = computed[prop] as string | undefined;
-      if (value && value.includes("oklch")) node.style.setProperty(prop.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`), toRgb(value, cache));
+      if (value && value.includes("oklch")) {
+        node.style.setProperty(
+          prop.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`),
+          toRgb(value, cache),
+        );
+      }
     });
     if (computed.boxShadow?.includes("oklch")) node.style.boxShadow = "none";
     if (computed.backgroundImage?.includes("oklch")) node.style.backgroundImage = "none";
@@ -62,8 +85,9 @@ export async function nodeToPdfBlob(node: HTMLElement): Promise<Blob> {
     useCORS: true,
     logging: false,
     windowWidth: node.scrollWidth,
-    onclone: (_doc, element) => normaliseColors(element as HTMLElement),
+    onclone: (doc) => normaliseDocument(doc),
   });
+
 
 
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
