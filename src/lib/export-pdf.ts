@@ -6,6 +6,92 @@ import { jsPDF } from "jspdf";
  * Rendering through the browser guarantees correctly shaped Arabic script,
  * which font-embedding PDF writers cannot do on their own.
  */
+const COLOR_PROPS = [
+  "color",
+  "backgroundColor",
+  "borderTopColor",
+  "borderRightColor",
+  "borderBottomColor",
+  "borderLeftColor",
+  "outlineColor",
+  "textDecorationColor",
+  "fill",
+  "stroke",
+] as const;
+
+/** html2canvas cannot parse modern colour spaces, so resolve them to rgb via the canvas API. */
+function toRgb(value: string, cache: Map<string, string>): string {
+  const cached = cache.get(value);
+  if (cached) return cached;
+  const probe = document.createElement("canvas");
+  probe.width = 1;
+  probe.height = 1;
+  const context = probe.getContext("2d", { willReadFrequently: true });
+  let result = "rgb(0, 0, 0)";
+  if (context) {
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = value;
+    context.fillRect(0, 0, 1, 1);
+    const data = context.getImageData(0, 0, 1, 1).data;
+    result = `rgba(${data[0]}, ${data[1]}, ${data[2]}, ${((data[3] ?? 255) / 255).toFixed(3)})`;
+
+  }
+  cache.set(value, result);
+  return result;
+}
+
+/** Rewrites every oklch custom property and inline colour in the cloned document. */
+function normaliseDocument(doc: Document) {
+  const cache = new Map<string, string>();
+  const view = doc.defaultView ?? window;
+
+  // 1. Resolve design-token custom properties declared on :root / html.
+  const rootStyles = view.getComputedStyle(doc.documentElement);
+  const names = new Set<string>();
+  for (let i = 0; i < rootStyles.length; i += 1) {
+    const name = rootStyles.item(i);
+    if (name.startsWith("--")) names.add(name);
+  }
+  Array.from(doc.styleSheets).forEach((sheet) => {
+    try {
+      Array.from(sheet.cssRules).forEach((rule) => {
+        (rule.cssText.match(/--[\w-]+/g) ?? []).forEach((name) => names.add(name));
+      });
+    } catch {
+      /* cross-origin sheet */
+    }
+  });
+
+  const overrides: string[] = [];
+  names.forEach((name) => {
+    const value = rootStyles.getPropertyValue(name).trim();
+    if (value.includes("oklch")) overrides.push(`${name}: ${toRgb(value, cache)};`);
+  });
+  if (overrides.length) {
+    const style = doc.createElement("style");
+    style.textContent = `:root, html, body, *, *::before, *::after { ${overrides.join(" ")} }`;
+    doc.head.appendChild(style);
+  }
+
+
+  // 2. Flatten anything still computing to oklch.
+  const nodes = Array.from(doc.querySelectorAll<HTMLElement>("*"));
+  nodes.forEach((node) => {
+    const computed = view.getComputedStyle(node);
+    COLOR_PROPS.forEach((prop) => {
+      const value = computed[prop] as string | undefined;
+      if (value && value.includes("oklch")) {
+        node.style.setProperty(
+          prop.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`),
+          toRgb(value, cache),
+        );
+      }
+    });
+    if (computed.boxShadow?.includes("oklch")) node.style.boxShadow = "none";
+    if (computed.backgroundImage?.includes("oklch")) node.style.backgroundImage = "none";
+  });
+}
+
 export async function nodeToPdfBlob(node: HTMLElement): Promise<Blob> {
   const canvas = await html2canvas(node, {
     scale: 2,
@@ -13,7 +99,10 @@ export async function nodeToPdfBlob(node: HTMLElement): Promise<Blob> {
     useCORS: true,
     logging: false,
     windowWidth: node.scrollWidth,
+    onclone: (doc) => normaliseDocument(doc),
   });
+
+
 
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const pageWidthMm = pdf.internal.pageSize.getWidth();

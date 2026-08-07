@@ -69,8 +69,10 @@ function ReportPage() {
       if (kind === "zip") downloadBlob(await zipReports(report), `${report.base}.zip`);
       await logAuditEdit(id, "report_generated", `${kind.toUpperCase()} v${model.version}`);
       toast.success("Report generated and archived");
-    } catch {
-      toast.error("Could not generate the report");
+    } catch (error) {
+      console.error("report generation failed", error);
+      toast.error(error instanceof Error ? error.message : "Could not generate the report");
+
     } finally {
       setBusy(null);
     }

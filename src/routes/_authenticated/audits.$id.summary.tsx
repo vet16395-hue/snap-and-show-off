@@ -231,18 +231,23 @@ function SummaryPage() {
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">
-        {isDraft ? (
+        {isDraft && (
           <Button disabled={submitting} onClick={submitAudit}>
-            {submitting && <Loader2 className="size-4 animate-spin" />} Submit audit
-          </Button>
-        ) : (
-          <Button asChild>
-            <Link to="/audits/$id/report" params={{ id }}>
-              View report
-            </Link>
+            {submitting && <Loader2 className="size-4 animate-spin" />} Complete audit
           </Button>
         )}
+        <Button asChild variant={isDraft ? "outline" : "default"}>
+          <Link to="/audits/$id/report" params={{ id }}>
+            Generate report
+          </Link>
+        </Button>
+        <Button asChild variant="ghost">
+          <Link to="/audits/$id" params={{ id }}>
+            Back to questions
+          </Link>
+        </Button>
       </div>
+
     </AppShell>
   );
 }

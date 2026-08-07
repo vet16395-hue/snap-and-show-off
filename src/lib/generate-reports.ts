@@ -28,17 +28,23 @@ export async function generateReports(model: ReportModel, node: HTMLElement): Pr
   const [pdf, docx] = await Promise.all([nodeToPdfBlob(node), buildReportDocx(model)]);
 
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const pdfPath = `${model.auditId}/${base}_v${model.version}_${stamp}.pdf`;
-  const docxPath = `${model.auditId}/${base}_v${model.version}_${stamp}.docx`;
+  // Storage keys must stay ASCII, while the downloaded filenames keep their original names.
+  const safeBase = base.replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^_+|_+$/g, "") || "report";
+  const pdfPath = `${model.auditId}/${safeBase}_v${model.version}_${stamp}.pdf`;
+  const docxPath = `${model.auditId}/${safeBase}_v${model.version}_${stamp}.docx`;
 
-  await Promise.all([
+  const [pdfUpload, docxUpload] = await Promise.all([
     supabase.storage.from("audit-reports").upload(pdfPath, pdf, { contentType: "application/pdf" }),
     supabase.storage.from("audit-reports").upload(docxPath, docx, {
       contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     }),
   ]);
+  if (pdfUpload.error || docxUpload.error) {
+    console.error("report upload failed", pdfUpload.error, docxUpload.error);
+  } else {
+    await supabase.from("reports").insert({ audit_id: model.auditId, pdf_path: pdfPath, docx_path: docxPath });
+  }
 
-  await supabase.from("reports").insert({ audit_id: model.auditId, pdf_path: pdfPath, docx_path: docxPath });
 
   return {
     base,
