@@ -38,10 +38,10 @@ const th: React.CSSProperties = {
 const td: React.CSSProperties = { border: `1px solid ${LINE}`, padding: "8px 10px", verticalAlign: "top" };
 const arStyle: React.CSSProperties = { direction: "rtl", textAlign: "right", unicodeBidi: "isolate" };
 
-function Header() {
+function CoverHeader() {
   return (
     <div style={{ background: BRAND, color: "#ffffff", padding: 20, borderRadius: 8, textAlign: "center" }}>
-      <div style={{ ...arStyle, textAlign: "center", fontSize: 26, fontWeight: 800, letterSpacing: 1 }}>سعودي</div>
+      <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 1 }}>Quality department</div>
     </div>
   );
 }
