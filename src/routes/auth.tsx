@@ -75,7 +75,7 @@ function AuthPage() {
             S
           </span>
           <h1 className="mt-4 text-xl font-extrabold">Seoudi Branches Audit System</h1>
-          <p className="text-xs text-muted-foreground">Food safety auditing · SBAS</p>
+          <p className="text-xs text-muted-foreground">{"\n"}</p>
         </div>
 
         <div className="surface-card p-5">
