@@ -92,26 +92,32 @@ function normaliseDocument(doc: Document) {
   });
 }
 
-export async function nodeToPdfBlob(node: HTMLElement): Promise<Blob> {
-  const canvas = await html2canvas(node, {
+async function rasterise(node: HTMLElement): Promise<HTMLCanvasElement> {
+  const width = Math.ceil(node.getBoundingClientRect().width || node.scrollWidth);
+  const height = Math.ceil(node.scrollHeight);
+  return html2canvas(node, {
     scale: 2,
     backgroundColor: "#ffffff",
     useCORS: true,
     logging: false,
-    windowWidth: node.scrollWidth,
+    width,
+    height,
+    windowWidth: Math.max(width + 80, document.documentElement.clientWidth),
+    scrollX: 0,
+    scrollY: 0,
     onclone: (doc) => normaliseDocument(doc),
   });
+}
 
-
-
-  const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+/** Adds one canvas to the PDF, splitting it across pages when it exceeds A4 height. */
+function addCanvas(pdf: jsPDF, canvas: HTMLCanvasElement, isFirst: boolean) {
   const pageWidthMm = pdf.internal.pageSize.getWidth();
   const pageHeightMm = pdf.internal.pageSize.getHeight();
   const pxPerMm = canvas.width / pageWidthMm;
   const pageHeightPx = Math.floor(pageHeightMm * pxPerMm);
 
   let offset = 0;
-  let first = true;
+  let first = isFirst;
   while (offset < canvas.height) {
     const sliceHeight = Math.min(pageHeightPx, canvas.height - offset);
     const slice = document.createElement("canvas");
@@ -124,17 +130,24 @@ export async function nodeToPdfBlob(node: HTMLElement): Promise<Blob> {
     context.drawImage(canvas, 0, offset, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
 
     if (!first) pdf.addPage();
-    pdf.addImage(
-      slice.toDataURL("image/jpeg", 0.92),
-      "JPEG",
-      0,
-      0,
-      pageWidthMm,
-      sliceHeight / pxPerMm,
-    );
+    pdf.addImage(slice.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, pageWidthMm, sliceHeight / pxPerMm);
     first = false;
     offset += sliceHeight;
+  }
+}
+
+export async function nodeToPdfBlob(node: HTMLElement): Promise<Blob> {
+  const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const pages = Array.from(node.querySelectorAll<HTMLElement>("[data-report-page]"));
+  const targets = pages.length > 0 ? pages : [node];
+
+  let first = true;
+  for (const target of targets) {
+    const canvas = await rasterise(target);
+    addCanvas(pdf, canvas, first);
+    first = false;
   }
 
   return pdf.output("blob");
 }
+
