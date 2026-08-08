@@ -248,7 +248,7 @@ export function ReportDocument({ model }: { model: ReportModel }) {
 
 
             {/* Section total */}
-            <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 14 }}>
+            <table data-report-block style={{ width: "100%", borderCollapse: "collapse", marginTop: 14 }}>
               <tbody>
                 <tr>
                   <td style={{ ...td, background: BRAND, color: "#ffffff", fontWeight: 700 }}>Section Total</td>
@@ -283,7 +283,7 @@ export function ReportDocument({ model }: { model: ReportModel }) {
             {entry.section.nameAr}
           </div>
           {entry.questions.map((question) => (
-            <div key={question.id} style={{ marginTop: 14 }}>
+            <div key={question.id} data-report-block style={{ marginTop: 14 }}>
               <div style={{ ...arStyle, fontWeight: 700 }}>{question.textAr}</div>
               <div style={{ direction: "ltr", textAlign: "left", fontSize: 10, color: "#6b7a6f" }}>
                 {question.itemId}
