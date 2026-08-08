@@ -180,6 +180,7 @@ export function ReportDocument({ model }: { model: ReportModel }) {
         return (
           <div key={section.id} style={page} data-report-page>
             <h2
+              data-report-block
               style={{
                 ...arStyle,
                 fontSize: 18,
@@ -198,11 +199,16 @@ export function ReportDocument({ model }: { model: ReportModel }) {
             {section.groups.map((group) => (
               <div key={group.id ?? "ungrouped"} style={{ marginTop: 12 }}>
                 {group.labelAr && (
-                  <div style={{ ...arStyle, fontWeight: 700, color: BRAND, marginBottom: 6 }}>{group.labelAr}</div>
+                  <div
+                    data-report-block
+                    style={{ ...arStyle, fontWeight: 700, color: BRAND, marginBottom: 6 }}
+                  >
+                    {group.labelAr}
+                  </div>
                 )}
                 <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
                   <thead>
-                    <tr>
+                    <tr data-report-block>
                       <th style={th}>Question</th>
                       <th style={{ ...th, width: 80 }}>Score</th>
                       <th style={{ ...th, width: 180 }}>Comment</th>
@@ -210,7 +216,7 @@ export function ReportDocument({ model }: { model: ReportModel }) {
                   </thead>
                   <tbody>
                     {group.questions.map((question) => (
-                      <tr key={question.id}>
+                      <tr key={question.id} data-report-block>
                         <td style={{ ...td, ...arStyle, wordBreak: "break-word" }}>
                           <div style={{ direction: "ltr", textAlign: "left", fontSize: 10, color: "#6b7a6f" }}>
                             {question.itemId}
@@ -230,7 +236,7 @@ export function ReportDocument({ model }: { model: ReportModel }) {
             ))}
 
             {section.deductions.length > 0 && (
-              <div style={{ marginTop: 10 }}>
+              <div style={{ marginTop: 10 }} data-report-block>
                 <div style={{ fontWeight: 700, fontSize: 12 }}>Internal deductions</div>
                 {section.deductions.map((deduction) => (
                   <div key={deduction.id} style={arStyle}>
@@ -239,6 +245,7 @@ export function ReportDocument({ model }: { model: ReportModel }) {
                 ))}
               </div>
             )}
+
 
             {/* Section total */}
             <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 14 }}>
