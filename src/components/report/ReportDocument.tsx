@@ -65,7 +65,7 @@ export function ReportDocument({ model }: { model: ReportModel }) {
     <div dir="ltr" lang="en">
       {/* Page 1 — cover + summary */}
       <div style={page} data-report-page>
-        <Header />
+        <CoverHeader />
 
         <h1 style={{ fontSize: 24, margin: "24px 0 4px", color: BRAND }}>
           {model.auditTypeNameEn || "Audit Report"}
@@ -179,7 +179,6 @@ export function ReportDocument({ model }: { model: ReportModel }) {
         const scores = resultById.get(section.id);
         return (
           <div key={section.id} style={page} data-report-page>
-            <Header />
             <h2
               style={{
                 ...arStyle,
@@ -262,7 +261,6 @@ export function ReportDocument({ model }: { model: ReportModel }) {
       {/* Photo appendix — grouped per section */}
       {photoSections.map((entry) => (
         <div key={`photos-${entry.section.id}`} style={page} data-report-page>
-          <Header />
           <h2
             style={{
               fontSize: 18,
