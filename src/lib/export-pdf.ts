@@ -109,17 +109,39 @@ async function rasterise(node: HTMLElement): Promise<HTMLCanvasElement> {
   });
 }
 
-/** Adds one canvas to the PDF, splitting it across pages when it exceeds A4 height. */
-function addCanvas(pdf: jsPDF, canvas: HTMLCanvasElement, isFirst: boolean) {
+/**
+ * Collects the bottom edge (in CSS px, relative to the target's top) of every
+ * atomic block so page breaks never cut through a question row or paragraph.
+ */
+function collectBreakpoints(target: HTMLElement): number[] {
+  const top = target.getBoundingClientRect().top;
+  const blocks = Array.from(target.querySelectorAll<HTMLElement>("[data-report-block]"));
+  const points = blocks.map((el) => el.getBoundingClientRect().bottom - top);
+  return Array.from(new Set(points.map((p) => Math.round(p)))).sort((a, b) => a - b);
+}
+
+/** Adds one canvas to the PDF, splitting it across pages at safe boundaries. */
+function addCanvas(pdf: jsPDF, canvas: HTMLCanvasElement, isFirst: boolean, breakpointsPx: number[], cssWidth: number) {
   const pageWidthMm = pdf.internal.pageSize.getWidth();
   const pageHeightMm = pdf.internal.pageSize.getHeight();
   const pxPerMm = canvas.width / pageWidthMm;
   const pageHeightPx = Math.floor(pageHeightMm * pxPerMm);
+  const ratio = cssWidth > 0 ? canvas.width / cssWidth : 1;
+  const breaks = breakpointsPx.map((p) => Math.round(p * ratio));
 
   let offset = 0;
   let first = isFirst;
   while (offset < canvas.height) {
-    const sliceHeight = Math.min(pageHeightPx, canvas.height - offset);
+    const remaining = canvas.height - offset;
+    let sliceHeight = Math.min(pageHeightPx, remaining);
+
+    if (remaining > pageHeightPx) {
+      // Snap to the last block boundary that still fits on this page.
+      const limit = offset + pageHeightPx;
+      const candidates = breaks.filter((b) => b > offset + pageHeightPx * 0.25 && b <= limit);
+      if (candidates.length > 0) sliceHeight = candidates[candidates.length - 1]! - offset;
+    }
+
     const slice = document.createElement("canvas");
     slice.width = canvas.width;
     slice.height = sliceHeight;
@@ -143,11 +165,15 @@ export async function nodeToPdfBlob(node: HTMLElement): Promise<Blob> {
 
   let first = true;
   for (const target of targets) {
+    const breaks = collectBreakpoints(target);
+    const cssWidth = target.getBoundingClientRect().width || target.scrollWidth;
     const canvas = await rasterise(target);
-    addCanvas(pdf, canvas, first);
+    // Each [data-report-page] starts on a fresh PDF page.
+    addCanvas(pdf, canvas, first, breaks, cssWidth);
     first = false;
   }
 
   return pdf.output("blob");
 }
+
 
