@@ -120,12 +120,18 @@ function collectBreakpoints(target: HTMLElement): number[] {
   return Array.from(new Set(points.map((p) => Math.round(p)))).sort((a, b) => a - b);
 }
 
+/** Outer page margin (mm) applied symmetrically so RTL/LTR text is never clipped. */
+const MARGIN_MM = 12;
+
 /** Adds one canvas to the PDF, splitting it across pages at safe boundaries. */
 function addCanvas(pdf: jsPDF, canvas: HTMLCanvasElement, isFirst: boolean, breakpointsPx: number[], cssWidth: number) {
   const pageWidthMm = pdf.internal.pageSize.getWidth();
   const pageHeightMm = pdf.internal.pageSize.getHeight();
-  const pxPerMm = canvas.width / pageWidthMm;
-  const pageHeightPx = Math.floor(pageHeightMm * pxPerMm);
+  const contentWidthMm = pageWidthMm - MARGIN_MM * 2;
+  const contentHeightMm = pageHeightMm - MARGIN_MM * 2;
+  // Scale is driven by the content box, so the full capture width always fits.
+  const pxPerMm = canvas.width / contentWidthMm;
+  const pageHeightPx = Math.floor(contentHeightMm * pxPerMm);
   const ratio = cssWidth > 0 ? canvas.width / cssWidth : 1;
   const breaks = breakpointsPx.map((p) => Math.round(p * ratio));
 
@@ -152,11 +158,19 @@ function addCanvas(pdf: jsPDF, canvas: HTMLCanvasElement, isFirst: boolean, brea
     context.drawImage(canvas, 0, offset, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
 
     if (!first) pdf.addPage();
-    pdf.addImage(slice.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, pageWidthMm, sliceHeight / pxPerMm);
+    pdf.addImage(
+      slice.toDataURL("image/jpeg", 0.92),
+      "JPEG",
+      MARGIN_MM,
+      MARGIN_MM,
+      contentWidthMm,
+      sliceHeight / pxPerMm,
+    );
     first = false;
     offset += sliceHeight;
   }
 }
+
 
 export async function nodeToPdfBlob(node: HTMLElement): Promise<Blob> {
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
