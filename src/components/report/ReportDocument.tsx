@@ -16,7 +16,7 @@ const PAGE_WIDTH = 794;
 
 const page: React.CSSProperties = {
   width: PAGE_WIDTH,
-  minHeight: 1123,
+  minHeight: 1165, // matches the A4 content box (186mm × 273mm) used by the PDF exporter
   background: "#ffffff",
   color: "#16211a",
   fontFamily: "Cairo, Arial, sans-serif",
