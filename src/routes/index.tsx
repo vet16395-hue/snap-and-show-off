@@ -5,16 +5,16 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "SBAS — Seoudi Branches Audit System" },
+      { title: "Seoudi Branch Auditing System" },
       {
         name: "description",
         content:
-          "Food safety auditing for Seoudi branches: dynamic weighted checklists, precise scoring and professional bilingual reports.",
+          "Food safety auditing app for Seoudi branches: dynamic weighted checklists, precise scoring and professional bilingual reports.",
       },
-      { property: "og:title", content: "SBAS — Seoudi Branches Audit System" },
+      { property: "og:title", content: "Seoudi Branch Auditing System" },
       {
         property: "og:description",
-        content: "Dynamic checklists, automatic scoring and professional reports for Seoudi Market branches.",
+        content: "Food safety auditing app for Seoudi branches: dynamic weighted checklists, precise scoring and professional bilingual reports.",
       },
     ],
   }),
