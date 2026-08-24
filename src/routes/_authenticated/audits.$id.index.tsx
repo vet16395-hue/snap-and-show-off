@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Camera, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { Camera, ChevronLeft, ChevronRight, FolderOpen, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,16 @@ import { Badge } from "@/components/ui/badge";
 import { computeAudit, type ScoringSection } from "@/lib/scoring";
 import { deletePhoto, signedPhotoUrls, uploadQuestionPhoto } from "@/lib/photos";
 
+type AuditSearchParams = {
+  section?: number;
+  questionId?: string;
+};
+
 export const Route = createFileRoute("/_authenticated/audits/$id/")({
+  validateSearch: (search: Record<string, unknown>): AuditSearchParams => ({
+    section: typeof search.section === "number" ? search.section : Number(search.section) || undefined,
+    questionId: typeof search.questionId === "string" ? search.questionId : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Run Audit — SBAS" },
@@ -38,9 +47,10 @@ type AnswerState = { score: number | null; isNa: boolean; comment: string };
 
 function AuditRunner() {
   const { id } = Route.useParams();
+  const search = Route.useSearch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [stepIndex, setStepIndex] = useState(0);
+  const [stepIndex, setStepIndex] = useState(search.section ?? 0);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
   const [sectionNa, setSectionNa] = useState<Record<string, boolean>>({});
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -82,6 +92,28 @@ function AuditRunner() {
   });
 
   useEffect(() => {
+    if (search.section !== undefined && search.section !== stepIndex) {
+      setStepIndex(search.section);
+    }
+  }, [search.section]);
+
+  useEffect(() => {
+    if (search.questionId) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`q-${search.questionId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.classList.add("ring-2", "ring-destructive", "ring-offset-2");
+          setTimeout(() => {
+            el.classList.remove("ring-2", "ring-destructive", "ring-offset-2");
+          }, 3000);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [search.questionId, stepIndex]);
+
+  useEffect(() => {
     if (!data) return;
     const nextAnswers: Record<string, AnswerState> = {};
     data.savedAnswers.forEach((answer) => {
@@ -98,6 +130,11 @@ function AuditRunner() {
     });
     setSectionNa(nextStatus);
   }, [data]);
+
+  const changeStep = (newIndex: number) => {
+    setStepIndex(newIndex);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const photosByQuestion = useMemo(() => {
     const map: Record<string, { id: string; storage_path: string }[]> = {};
@@ -256,14 +293,14 @@ function AuditRunner() {
         {data.sections.map((entry, index) => (
           <button
             key={entry.id}
-            onClick={() => setStepIndex(index)}
+            onClick={() => changeStep(index)}
             className={
               index === stepIndex
-                ? "rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground"
-                : "rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted"
+                ? "rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow"
+                : "rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
             }
           >
-            {index + 1}
+            {index + 1}. {entry.name_ar}
           </button>
         ))}
       </div>
@@ -282,7 +319,7 @@ function AuditRunner() {
       </div>
 
       {!isNaSection && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {sectionQuestions.map((question) => {
             const answer = answers[question.id] ?? { score: null, isNa: false, comment: "" };
             const header = data.headers.find((entry) => entry.id === question.header_id);
@@ -294,7 +331,7 @@ function AuditRunner() {
             const questionPhotos = photosByQuestion[question.id] ?? [];
 
             return (
-              <div key={question.id} className="surface-card p-4">
+              <div key={question.id} id={`q-${question.id}`} className="surface-card p-4 transition-all duration-300">
                 <div dir="rtl" className="text-right">
                   {header && <div className="text-xs font-semibold text-primary">{header.label_ar}</div>}
                   <div className="mt-1 text-[11px] text-muted-foreground" dir="ltr">
@@ -336,47 +373,74 @@ function AuditRunner() {
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {!readOnly && (
-                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input px-3 py-2 text-sm">
-                      <Camera className="size-4" /> Add photo
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        className="hidden"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          if (file) handlePhoto(question.id, file);
-                          event.target.value = "";
-                        }}
-                      />
-                    </label>
+                    <div className="flex gap-2">
+                      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-muted">
+                        <Camera className="size-4" /> Camera
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="hidden"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (file) handlePhoto(question.id, file);
+                            event.target.value = "";
+                          }}
+                        />
+                      </label>
+                      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-muted">
+                        <FolderOpen className="size-4" /> Storage
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (file) handlePhoto(question.id, file);
+                            event.target.value = "";
+                          }}
+                        />
+                      </label>
+                    </div>
                   )}
                   {needsPhoto && questionPhotos.length === 0 && (
                     <span className="text-xs text-destructive">A photo is required when scoring below the maximum</span>
                   )}
-                  {questionPhotos.map((photo) => (
-                    <div key={photo.id} className="relative">
-                      <img
-                        src={photoUrls?.[photo.storage_path]}
-                        alt={`Audit evidence for item ${question.item_id}`}
-                        loading="lazy"
-                        className="size-16 rounded-md object-cover"
-                      />
-                      {!readOnly && (
-                        <button
-                          className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full bg-destructive text-destructive-foreground"
-                          aria-label="Delete photo"
-                          onClick={async () => {
-                            await deletePhoto(photo.id, photo.storage_path);
-                            queryClient.invalidateQueries({ queryKey: ["audit", id] });
-                          }}
-                        >
-                          <Trash2 className="size-3" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
                 </div>
+
+                {questionPhotos.length > 0 && (
+                  <div className="mt-3 border-t border-border/50 pt-3">
+                    <div className="flex flex-wrap gap-3">
+                      {questionPhotos.map((photo) => (
+                        <div key={photo.id} className="relative rounded-lg border border-border p-1 bg-muted/20">
+                          <img
+                            src={photoUrls?.[photo.storage_path]}
+                            alt={`Audit evidence for item ${question.item_id}`}
+                            loading="lazy"
+                            className="size-20 rounded-md object-cover"
+                          />
+                          {!readOnly && (
+                            <button
+                              className="absolute -top-2 -right-2 grid size-5 place-items-center rounded-full bg-destructive text-destructive-foreground"
+                              aria-label="Delete photo"
+                              onClick={async () => {
+                                await deletePhoto(photo.id, photo.storage_path);
+                                queryClient.invalidateQueries({ queryKey: ["audit", id] });
+                              }}
+                            >
+                              <Trash2 className="size-3" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {answer.comment && (
+                      <p className="mt-2 text-xs text-muted-foreground bg-muted p-2 rounded" dir="rtl">
+                        <strong>الملاحظة المسجلة:</strong> {answer.comment}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -405,11 +469,11 @@ function AuditRunner() {
       )}
 
       <div className="mt-6 flex items-center gap-2">
-        <Button variant="outline" disabled={stepIndex === 0} onClick={() => setStepIndex((index) => index - 1)}>
+        <Button variant="outline" disabled={stepIndex === 0} onClick={() => changeStep(stepIndex - 1)}>
           <ChevronLeft className="size-4" /> Previous
         </Button>
         {stepIndex < data.sections.length - 1 ? (
-          <Button className="ml-auto" onClick={() => setStepIndex((index) => index + 1)}>
+          <Button className="ml-auto" onClick={() => changeStep(stepIndex + 1)}>
             Next <ChevronRight className="size-4" />
           </Button>
         ) : (
