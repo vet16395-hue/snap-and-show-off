@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, Loader2, PenLine, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowRight, Loader2, PenLine, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,22 @@ function SummaryPage() {
     },
   });
 
+  const missingErrors = (model?.sections ?? [])
+    .map((sec, secIdx) => ({ sec, secIdx }))
+    .filter(({ sec }) => !sec.excluded)
+    .flatMap(({ sec, secIdx }) =>
+      sec.groups.flatMap((grp) =>
+        grp.questions
+          .filter((q) => !q.isNa && q.score === null)
+          .map((q) => ({
+            sectionIndex: secIdx,
+            sectionName: sec.nameAr,
+            questionId: q.id,
+            text: q.textAr,
+          }))
+      )
+    );
+
   if (isLoading || !model) {
     return (
       <AppShell title="Audit Summary">
@@ -123,7 +139,7 @@ function SummaryPage() {
           <Badge variant={isDraft ? "outline" : "default"}>{isDraft ? "Draft" : "Completed"}</Badge>
           <Button asChild variant="outline" size="sm">
             <Link to="/audits/$id" params={{ id }}>
-              <PenLine className="size-4" /> Back to checklist
+              <PenLine className="size-4 ml-1" /> Back to checklist
             </Link>
           </Button>
         </div>
@@ -138,9 +154,31 @@ function SummaryPage() {
         </div>
       </div>
 
-      {(unanswered ?? 0) > 0 && isDraft && (
-        <div className="mt-4 flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-          <AlertTriangle className="size-4" /> {unanswered} question(s) still need an answer before submission.
+      {missingErrors.length > 0 && isDraft && (
+        <div className="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4">
+          <div className="flex items-center gap-2 font-bold text-destructive mb-2">
+            <AlertCircle className="size-5" />
+            <span>يوجد {missingErrors.length} بند يتطلب الإجابة - اضغط على الخطأ للانتقال لمكانه مباشرة:</span>
+          </div>
+          <div className="space-y-1.5">
+            {missingErrors.map((err, i) => (
+              <Link
+                key={i}
+                to="/audits/$id"
+                params={{ id }}
+                search={{ section: err.sectionIndex, questionId: err.questionId }}
+                className="flex items-center justify-between rounded-md bg-background/80 p-2.5 text-xs text-foreground shadow-sm hover:bg-background transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">{err.sectionName}</Badge>
+                  <span>{err.text}</span>
+                </div>
+                <span className="flex items-center text-primary font-semibold">
+                  تصحيح في ({err.sectionName}) <ArrowRight className="size-3 mr-1" />
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 
@@ -159,7 +197,14 @@ function SummaryPage() {
             {result.sections.map((entry, index) => (
               <tr key={entry.sectionId} className="border-t border-border">
                 <td className="p-3" dir="rtl" align="right">
-                  {entry.nameAr}
+                  <Link
+                    to="/audits/$id"
+                    params={{ id }}
+                    search={{ section: index }}
+                    className="text-primary hover:underline font-semibold"
+                  >
+                    {entry.nameAr}
+                  </Link>
                   {entry.isDelivery && (
                     <span className="ml-2 text-xs text-muted-foreground" dir="ltr">
                       Delivery — separate
@@ -173,7 +218,7 @@ function SummaryPage() {
                 <td className="p-3 font-bold">{entry.excluded ? "—" : `${entry.percentage}%`}</td>
                 <td className="p-3 text-right">
                   <Button asChild size="sm" variant="ghost">
-                    <Link to="/audits/$id" params={{ id }} hash={`section-${index}`}>
+                    <Link to="/audits/$id" params={{ id }} search={{ section: index }}>
                       Edit
                     </Link>
                   </Button>
@@ -247,7 +292,6 @@ function SummaryPage() {
           </Link>
         </Button>
       </div>
-
     </AppShell>
   );
 }
