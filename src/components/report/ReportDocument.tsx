@@ -246,7 +246,6 @@ export function ReportDocument({ model }: { model: ReportModel }) {
               </div>
             )}
 
-
             {/* Section total */}
             <table data-report-block style={{ width: "100%", borderCollapse: "collapse", marginTop: 14 }}>
               <tbody>
@@ -265,7 +264,7 @@ export function ReportDocument({ model }: { model: ReportModel }) {
         );
       })}
 
-      {/* Photo appendix — grouped per section */}
+      {/* Photo appendix — grouped per section with photos and comments */}
       {photoSections.map((entry) => (
         <div key={`photos-${entry.section.id}`} style={page} data-report-page>
           <h2
@@ -283,19 +282,38 @@ export function ReportDocument({ model }: { model: ReportModel }) {
             {entry.section.nameAr}
           </div>
           {entry.questions.map((question) => (
-            <div key={question.id} data-report-block style={{ marginTop: 14 }}>
+            <div key={question.id} data-report-block style={{ marginTop: 14, borderBottom: `1px dashed ${LINE}`, paddingBottom: 12 }}>
               <div style={{ ...arStyle, fontWeight: 700 }}>{question.textAr}</div>
               <div style={{ direction: "ltr", textAlign: "left", fontSize: 10, color: "#6b7a6f" }}>
                 {question.itemId}
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
+
+              {/* عرض الكومنت والملاحظة الخاصة بالبند والصور */}
+              {question.comment && (
+                <div
+                  style={{
+                    ...arStyle,
+                    background: OFFWHITE,
+                    padding: "6px 10px",
+                    borderRadius: 4,
+                    fontSize: 11,
+                    marginTop: 6,
+                    color: BRAND,
+                    borderRight: `3px solid ${BRAND}`,
+                  }}
+                >
+                  <strong>الملاحظة:</strong> {question.comment}
+                </div>
+              )}
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
                 {question.photos.map((photo) => (
                   <img
                     key={photo.id}
                     src={photo.url}
                     alt={`Audit evidence for item ${question.itemId}`}
                     crossOrigin="anonymous"
-                    style={{ width: 210, height: 158, objectFit: "cover", border: `1px solid ${LINE}` }}
+                    style={{ width: 210, height: 158, objectFit: "cover", border: `1px solid ${LINE}`, borderRadius: 4 }}
                   />
                 ))}
               </div>
